@@ -10,8 +10,8 @@ builder.Host.UseSerilog((context, configuration) => configuration.ReadFrom.Confi
 
 builder.Services.SetupPresentationLayer()
                 .SetupPersistanceLayer()
-                .SetupInfrastructureLayer()
-                .SetupApplicationLayer();
+                .SetupInfrastructureLayer(builder.Configuration)
+                .SetupApplicationLayer(builder.Configuration);
 
 var app = builder.Build();
 

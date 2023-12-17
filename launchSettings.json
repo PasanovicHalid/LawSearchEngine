@@ -4,7 +4,11 @@
       "commandName": "DockerCompose",
       "commandVersion": "1.0",
       "serviceActions": {
-        "lawsearchengine": "StartDebugging"
+        "lawsearchengine": "StartDebugging",
+        "es01": "StartWithoutDebugging",
+        "kibana": "StartWithoutDebugging",
+        "logstash01": "StartWithoutDebugging",
+        "setup": "StartWithoutDebugging"
       }
     }
   }
