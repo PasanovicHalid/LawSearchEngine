@@ -18,6 +18,11 @@ networks:
 
 services:
  lawsearchengine:
+    depends_on:
+      es01:
+         condition: service_healthy
+      kibana:
+         condition: service_healthy
     image: ${DOCKER_REGISTRY-}lawsearchengine
     build:
       context: .
@@ -26,7 +31,7 @@ services:
  setup:
    image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
    volumes:
-     - certs:/usr/share/elasticsearch/config/certs
+     - ./certs:/usr/share/elasticsearch/config/certs
    user: "0"
    command: >
      bash -c '
@@ -85,7 +90,7 @@ services:
    labels:
      co.elastic.logs/module: elasticsearch
    volumes:
-     - certs:/usr/share/elasticsearch/config/certs
+     - ./certs:/usr/share/elasticsearch/config/certs
      - esdata01:/usr/share/elasticsearch/data
    ports:
      - ${ES_PORT}:9200
@@ -129,7 +134,7 @@ services:
    labels:
      co.elastic.logs/module: kibana
    volumes:
-     - certs:/usr/share/kibana/config/certs
+     - ./certs:/usr/share/kibana/config/certs
      - kibanadata:/usr/share/kibana/data
    ports:
      - ${KIBANA_PORT}:5601
@@ -164,7 +169,7 @@ services:
      co.elastic.logs/module: logstash
    user: root
    volumes:
-     - certs:/usr/share/logstash/certs
+     - ./certs:/usr/share/logstash/certs
      - logstashdata01:/usr/share/logstash/data
      # - "./logstash_ingest_data/:/usr/share/logstash/ingest_data/"
      - "./logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro"

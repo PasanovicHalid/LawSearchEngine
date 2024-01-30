@@ -32,11 +32,13 @@ namespace LawSearchEngine.Infrastructure
             ElasticsearchConfiguration elasticsearchConfiguration = configuration.GetRequiredSection("Elasticsearch").Get<ElasticsearchConfiguration>()!;
 
             var settings = new ElasticsearchClientSettings(new Uri(elasticsearchConfiguration.Url))
+                .ServerCertificateValidationCallback((sender, certificate, chain, errors) => true)
                 .CertificateFingerprint(elasticsearchConfiguration.CertificateThumbprint)
                 .EnableDebugMode()
                 .Authentication(new BasicAuthentication(elasticsearchConfiguration.BasicAuthUsername, elasticsearchConfiguration.BasicAuthPassword));
 
             var elasticsearchConnector = new ElasticSearchConnector(settings);
+
 
             services.AddSingleton<IElasticSearchConnector>(elasticsearchConnector);
 
