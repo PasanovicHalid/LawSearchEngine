@@ -1,13 +1,6 @@
 ﻿using FluentResults;
 using FluentValidation;
-using FluentValidation.Results;
 using MediatR;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace LawSearchEngine.Application.Common.Behaviors.Validation
 {

@@ -1,11 +1,6 @@
 ﻿using FluentResults;
 using FluentValidation;
 using LawSearchEngine.Application.Common.RequestTypes;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace LawSearchEngine.Application.WeatherForecast.Queries.GetForecast.Contracts
 {

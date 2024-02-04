@@ -1,15 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace LawSearchEngine.Domain.Common.ObjectTypes
+﻿namespace LawSearchEngine.Domain.Common.ObjectTypes
 {
     public abstract class Entity<KeyType> where KeyType : notnull
     {
         public KeyType Id { get; set; } = default!;
-        public Guid Guid { get; set; }
         public bool Deleted { get; set; }
         public byte[] RowVersion { get; set; } = Array.Empty<byte>();
 

@@ -9,6 +9,12 @@ volumes:
    driver: local
  logstashdata01:
    driver: local
+ minio_data:
+   driver: local
+ lawsearchengine_logs:
+   driver: local
+ lawsearchengine_db:
+   driver: local
 
 
 networks:
@@ -24,9 +30,21 @@ services:
       kibana:
          condition: service_healthy
     image: ${DOCKER_REGISTRY-}lawsearchengine
+    volumes:
+      - ./LawSearchEngine_Logs:/app/logs
     build:
       context: .
       dockerfile: LawSearchEngine/Dockerfile
+
+ lawsearchengine_db:
+    container_name: LawSearchEngine_DB
+    image: mcr.microsoft.com/mssql/server:2019-latest
+    volumes:
+      - lawsearchengine_db:/var/opt/mssql
+    environment:
+     - MSSQL_SA_PASSWORD=password@12345#
+     - MSSQL_USER=SA
+     - ACCEPT_EULA=Y  
 
  setup:
    image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
@@ -86,7 +104,9 @@ services:
    depends_on:
      setup:
        condition: service_healthy
-   image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
+   build:
+      context: .
+      dockerfile: Elasticsearch/Dockerfile
    labels:
      co.elastic.logs/module: elasticsearch
    volumes:
@@ -171,10 +191,46 @@ services:
    volumes:
      - ./certs:/usr/share/logstash/certs
      - logstashdata01:/usr/share/logstash/data
-     # - "./logstash_ingest_data/:/usr/share/logstash/ingest_data/"
+     - ./LawSearchEngine_Logs:/usr/share/logstash/ingest_data/
      - "./logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro"
    environment:
      - xpack.monitoring.enabled=false
      - ELASTIC_USER=elastic
      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
      - ELASTIC_HOSTS=https://es01:9200
+
+ minio:
+    image: minio/minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: timeout 5s bash -c ':> /dev/tcp/127.0.0.1/9000' || exit 1
+      start_period: 5s
+      interval: 10s
+      timeout: 5s
+      retries: 2
+
+ create-bucket:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MC_HOST_minio: http://${MINIO_ROOT_USER}:${MINIO_ROOT_PASSWORD}@minio:9000
+    entrypoint:
+      - sh
+      - -c
+      - |
+        until mc ls minio > /dev/null 2>&1; do
+          sleep 0.5
+        done
+            
+        mc mb minio/laws
+        mc mb minio/contracts

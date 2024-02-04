@@ -1,16 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Elastic.Clients.Elasticsearch.Core.Search;
+using LawSearchEngine.Application.Common.Contracts.DocumentSearch;
+using LawSearchEngine.Domain.Indexes;
 
 namespace LawSearchEngine.Application.Common.Connectors
 {
     public interface IElasticSearchConnector
     {
-        public Task<bool> IndexContractAsync(string signerName, string signerSurname, string governmentName, string levelOfGovernment, string contract, double latitude, double longitude);
-        public Task<bool> IndexLawAsync(string law);
-
+        public bool IndexContract(ContractIndex index);
+        public bool IndexLaw(LawIndex law);
+        public Task<IReadOnlyCollection<Hit<T>>> SearchAsync<T>(DocumentSearchRequest<T> request) where T : class;
 
     }
 }

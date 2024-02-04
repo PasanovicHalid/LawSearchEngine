@@ -1,24 +1,15 @@
 ﻿using FluentResults;
-using FluentValidation;
 using LawSearchEngine.Application.Common.Behaviors.Validation;
 using MediatR;
 using Microsoft.Extensions.Logging;
-using OpenTelemetry.Trace;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Globalization;
-using System.Linq;
-using System.Text;
-using System.Text.Json;
-using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace LawSearchEngine.Application.Common.Behaviors.Logging
 {
     internal class LoggingBehavior<TRequest, TResponse> :
-        IPipelineBehavior<TRequest, TResponse>
-        where TRequest : IRequest<TResponse>
-        where TResponse : ResultBase, new()
+            IPipelineBehavior<TRequest, TResponse>
+            where TRequest : IRequest<TResponse>
+            where TResponse : ResultBase, new()
     {
         private readonly ILogger<LoggingBehavior<TRequest, TResponse>> _logger;
 
@@ -33,7 +24,7 @@ namespace LawSearchEngine.Application.Common.Behaviors.Logging
         {
             string requestName = request.GetType().Name;
 
-            _logger.LogInformation("Handling {Request} with data {Data}", requestName, JsonSerializer.Serialize(request));
+            _logger.LogInformation("Handling {Request} with data {Data}", requestName, JsonConvert.SerializeObject(request));
 
             TResponse response;
 
@@ -51,11 +42,11 @@ namespace LawSearchEngine.Application.Common.Behaviors.Logging
         {
             if (error is ValidationError validationError)
             {
-                _logger.LogWarning("{Request} failed with validation errors {Errors}", requestName, JsonSerializer.Serialize(validationError.MapValidationErrors()));
+                _logger.LogWarning("{Request} failed with validation errors {Errors}", requestName, JsonConvert.SerializeObject(validationError.MapValidationErrors()));
             }
             else
             {
-                _logger.LogWarning("{Request} failed with error {Error}", requestName, JsonSerializer.Serialize(error));
+                _logger.LogWarning("{Request} failed with error {Error}", requestName, JsonConvert.SerializeObject(error));
             }
         }
     }

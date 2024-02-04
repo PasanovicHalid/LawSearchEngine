@@ -1,8 +1,10 @@
 ﻿using Elastic.Clients.Elasticsearch;
 using Elastic.Transport;
 using LawSearchEngine.Application.Common.Connectors;
+using LawSearchEngine.Domain.Indexes;
 using LawSearchEngine.Infrastructure.Configurations;
 using LawSearchEngine.Infrastructure.Connectors;
+using LawSearchEngine.Infrastructure.Connectors.LocationIQ;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using OpenTelemetry.Trace;
@@ -14,6 +16,7 @@ namespace LawSearchEngine.Infrastructure
         public static IServiceCollection SetupInfrastructureLayer(this IServiceCollection services, IConfiguration configuration)
         {
             services.Configure<ElasticsearchConfiguration>(configuration.GetSection("Elasticsearch"));
+            services.Configure<LocationIQConfiguration>(configuration.GetSection("LocationIQ"));
 
             services.SetupElasticsearch(configuration);
 
@@ -24,6 +27,10 @@ namespace LawSearchEngine.Infrastructure
                            .AddHttpClientInstrumentation();
                 });
 
+            services.AddScoped<ILocationIQConnector, LocationIQConnector>();
+
+            services.AddHttpClient();
+
             return services;
         }
 
@@ -31,7 +38,16 @@ namespace LawSearchEngine.Infrastructure
         {
             ElasticsearchConfiguration elasticsearchConfiguration = configuration.GetRequiredSection("Elasticsearch").Get<ElasticsearchConfiguration>()!;
 
+
             var settings = new ElasticsearchClientSettings(new Uri(elasticsearchConfiguration.Url))
+                .DefaultMappingFor<LawIndex>(m => m
+                                                  .IndexName("laws")
+                                                  .IdProperty(x => x.Id)
+                )
+                .DefaultMappingFor<ContractIndex>(m => m
+                                                       .IndexName("contracts")
+                                                       .IdProperty(x => x.Id)
+                )
                 .ServerCertificateValidationCallback((sender, certificate, chain, errors) => true)
                 .CertificateFingerprint(elasticsearchConfiguration.CertificateThumbprint)
                 .EnableDebugMode()

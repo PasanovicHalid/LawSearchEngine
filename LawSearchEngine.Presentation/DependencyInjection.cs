@@ -11,6 +11,8 @@ namespace LawSearchEngine.Presentation
         {
             services.AddSwaggerGen();
             services.AddEndpointsApiExplorer();
+            services.AddAntiforgery();
+
 
             return services;
         }
@@ -26,7 +28,13 @@ namespace LawSearchEngine.Presentation
                 });
             });
 
+            app.UseAntiforgery();
+
             app.SetupWeatherForecastEndpoints();
+            app.SetupLawSearchEndpoints();
+            app.SetupContractSearchEndpoints();
+            app.SetupDocumentEndpointsEndpoints();
+
             return app;
         }
     }

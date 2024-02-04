@@ -1,17 +1,9 @@
 ﻿using Elastic.Clients.Elasticsearch;
-using Elastic.Clients.Elasticsearch.Analysis;
-using Elastic.Clients.Elasticsearch.AsyncSearch;
-using Elastic.Clients.Elasticsearch.Core.Reindex;
 using Elastic.Clients.Elasticsearch.Core.Search;
 using Elastic.Clients.Elasticsearch.IndexManagement;
-using Elastic.Clients.Elasticsearch.Mapping;
 using LawSearchEngine.Application.Common.Connectors;
+using LawSearchEngine.Application.Common.Contracts.DocumentSearch;
 using LawSearchEngine.Domain.Indexes;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace LawSearchEngine.Infrastructure.Connectors
 {
@@ -23,49 +15,30 @@ namespace LawSearchEngine.Infrastructure.Connectors
         {
             _client = new ElasticsearchClient(settings);
 
-            var result = _client.Indices.Exists("laws");
+            CreateLawIndex();
 
-            if (!result.Exists)
-            {
-                _client.Indices.Create("laws");
-            }
+            CreateContractIndex();
         }
 
-        public Task<bool> IndexContractAsync(string signerName, string signerSurname, string governmentName, string levelOfGovernment, string contract, double latitude, double longitude)
+        public bool IndexContract(ContractIndex index)
         {
-            throw new NotImplementedException();
+            var result = _client.Index(index);
+            return result.IsValidResponse;
         }
 
-        public Task<bool> IndexLawAsync(string law)
+        public bool IndexLaw(LawIndex index)
         {
-            throw new NotImplementedException();
+            var result = _client.Index(index);
+            return result.IsValidResponse;
         }
 
-        public Task<dynamic> SearchLawsAsync(string query)
+        public async Task<IReadOnlyCollection<Hit<T>>> SearchAsync<T>(DocumentSearchRequest<T> request) where T : class
         {
-            var result = _client.Search<LawIndex>(x => x
-                                           .Query(q =>
-                                                  q.Match(m =>
-                                                          m.Field("law")
-                                                          .Query(query)
-                                                          .Analyzer("serbian")
-                                                          )
-                                                  )
-                                           .Highlight(h =>
-                                                      h.Fields(f =>
-                                                               f.Add("law", new HighlightField
-                                                               {
-                                                                   PreTags = new List<string> { "<b>" },
-                                                                   PostTags = new List<string> { "</b>" },
-                                                                   FragmentSize = 150,
-                                                               })
-                                                              )
-                                                      )
-                                           );
+            var result = await _client.SearchAsync<T>(x => x.Query(request.Query)
+                                                            .Highlight(request.Highlight)
+                                                     );
 
-
-
-            return Task.FromResult(result as dynamic);
+            return result.Hits;
         }
 
         public Task<dynamic> SearchContractsAsync(string signerName, string signerSurname, string governmentName, string levelOfGovernment, string contract, double longitude, double latitude)
@@ -96,9 +69,67 @@ namespace LawSearchEngine.Infrastructure.Connectors
                                                       )
                                            );
 
-
-
             return Task.FromResult(result as dynamic);
+        }
+
+        private void CreateContractIndex()
+        {
+            var contractIndexExists = _client.Indices.Exists("contracts");
+
+            if (!contractIndexExists.Exists)
+            {
+                var createContractResponse = _client.Indices.Create("contracts", c => c
+                                   .Mappings(ms => ms
+                                                   .Properties<ContractIndex>(p => p
+                                                        .Text(t => t.Contract, c => c.Analyzer("serbian"))
+                                                        .Text(t => t.ContractPath)
+                                                        .Text(t => t.GovernmentName, c => c.Analyzer("serbian"))
+                                                        .Text(t => t.LevelOfGovernment, c => c.Analyzer("serbian"))
+                                                        .Text(t => t.SignerName, c => c.Analyzer("serbian"))
+                                                        .Text(t => t.SignerSurname, c => c.Analyzer("serbian"))
+                                                        .GeoPoint(g => g.Location)
+                                                   )
+                                   ).Settings(SetupOfSerbianAnalyzer)
+               );
+            }
+        }
+
+        private void CreateLawIndex()
+        {
+            var lawIndexExists = _client.Indices.Exists("laws");
+
+            if (!lawIndexExists.Exists)
+            {
+                var response = _client.Indices.Create("laws", c => c
+                    .Mappings(ms => ms
+                        .Properties<LawIndex>(p => p
+                            .Text(t => t.Law, c => c.Analyzer("serbian"))
+                            .Text(t => t.LawPath)
+                        )
+                    ).Settings(SetupOfSerbianAnalyzer)
+                );
+            }
+        }
+
+        private static void SetupOfSerbianAnalyzer(IndexSettingsDescriptor s)
+        {
+            s.Analysis(a => a
+                .Analyzers(an => an
+                   .Custom("serbian", c => c
+                       .Tokenizer("standard")
+                       .Filter([
+                          "serbian_cyrillic_to_latinic",
+                           "lowercase",
+                           "icu_folding"
+                       ])
+                    )
+                 )
+                 .TokenFilters(tf => tf
+                    .IcuTransform("serbian_cyrillic_to_latinic", c => c
+                        .Id("Any-Latin; NFD; [:Nonspacing Mark:] Remove; NFC")
+                    )
+                 )
+            );
         }
     }
 }
